@@ -19,6 +19,7 @@ from operator import attrgetter
 import curses
 import curses.textpad
 
+
 class ViewType(IntEnum):
     EMPTY = auto()
     OVERLAYS = auto()
@@ -26,11 +27,13 @@ class ViewType(IntEnum):
     EQUERY_DEPGRAPH = auto()
     EQUERY_DEPENDS = auto()
 
+
 @dataclass
 class Package:
     cpv: str
     dependencies_count: int = 0
-    dependencies: List['Dependency'] = field(default_factory=list)
+    dependencies: List["Dependency"] = field(default_factory=list)
+
 
 @dataclass
 class Dependency:
@@ -38,11 +41,13 @@ class Dependency:
     depth: int
     filtered_depend_count: int = 1
 
+
 @dataclass
 class State:
     view_type: ViewType
     selected_index: int = 0
     scroll_offset: int = 0
+
 
 class Parser:
     EQUERY_LIST_SEPARATOR = "|"
@@ -53,8 +58,12 @@ class Parser:
         self.atom = atom
         self.equery_list_placeholders_count = len(self.EQUERY_LIST_PLACEHOLDERS)
         self.equery_list_set_placeholders_count = len(self.EQUERY_LIST_SET_PLACEHOLDERS)
-        self.equery_list_tmpl = self.EQUERY_LIST_SEPARATOR.join(self.EQUERY_LIST_PLACEHOLDERS)
-        self.equery_list_set_tmpl = self.EQUERY_LIST_SEPARATOR.join(self.EQUERY_LIST_SET_PLACEHOLDERS)
+        self.equery_list_tmpl = self.EQUERY_LIST_SEPARATOR.join(
+            self.EQUERY_LIST_PLACEHOLDERS
+        )
+        self.equery_list_set_tmpl = self.EQUERY_LIST_SEPARATOR.join(
+            self.EQUERY_LIST_SET_PLACEHOLDERS
+        )
 
         self.dependencies = {}
         self.world_packages: Dict[str, bool] = {}
@@ -64,7 +73,7 @@ class Parser:
         """Parse equery list output and return overlays with package dictionaries."""
         overlays = {}
 
-        for line in output.strip().split('\n'):
+        for line in output.strip().split("\n"):
             if not line.strip():
                 continue
 
@@ -77,11 +86,7 @@ class Parser:
 
             cpv, repo = parts
 
-            pkg = Package(
-                cpv=cpv,
-                dependencies_count=0,
-                dependencies=[]
-            )
+            pkg = Package(cpv=cpv, dependencies_count=0, dependencies=[])
 
             if repo not in overlays:
                 overlays[repo] = []
@@ -92,7 +97,7 @@ class Parser:
     def parse_equery_list_to_set(self, output: str) -> set[str]:
         packages = set()
 
-        for line in output.strip().split('\n'):
+        for line in output.strip().split("\n"):
             if not line.strip():
                 continue
 
@@ -111,7 +116,7 @@ class Parser:
 
     def parse_dependency_graph(self, output: str) -> List[Dependency]:
         """Parse equery g output and return list of dependencies."""
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
 
         deps = []
 
@@ -120,7 +125,7 @@ class Parser:
             if not line.strip():
                 continue
 
-            match = re.search(r'\s+\[\s*(\d+)\]\s+([\w\-/]+)-([\-\d\.\w_]+)', line)
+            match = re.search(r"\s+\[\s*(\d+)\]\s+([\w\-/]+)-([\-\d\.\w_]+)", line)
             if match:
                 depth, cp, fullverion = match.groups()
 
@@ -144,19 +149,19 @@ class Parser:
                 else:
                     self.dependencies[cpv] = dep
 
-
         return deps
 
     def parse_dependents(self, output: str) -> List[str]:
         """Parse equery d output and return list of packages that depend on this package."""
         dependents = []
-        for line in output.strip().split('\n'):
-            if line.startswith(' * '):
+        for line in output.strip().split("\n"):
+            if line.startswith(" * "):
                 continue
-            match = re.search(r'([^/]+/[^-]+)-([^\s]+)', line)
+            match = re.search(r"([^/]+/[^-]+)-([^\s]+)", line)
             if match:
                 dependents.append(match.group(1))
         return dependents
+
 
 class PackageNavigator:
     TITLE_LINE = 0
@@ -173,7 +178,10 @@ class PackageNavigator:
 
     def __init__(self, atom: str, overlays: Dict[str, List[Package]]):
         self.atom = atom
-        self.overlays: Dict[str, List[Package]] = {name: (sorted(overlay, key=attrgetter("dependencies_count"), reverse=True)) for name, overlay in overlays.items()}
+        self.overlays: Dict[str, List[Package]] = {
+            name: (sorted(overlay, key=attrgetter("dependencies_count"), reverse=True))
+            for name, overlay in overlays.items()
+        }
         self.overlay_keys = list(self.overlays.keys())
         self.overlays_length = len(self.overlay_keys)
 
@@ -201,15 +209,27 @@ class PackageNavigator:
         self.title(">".join(self._breadcrumbs))
 
     def title(self, line):
-        line = line.ljust(self.width)[:self.width]
-        self.stdscr.addstr(self.TITLE_LINE, 0, line, curses.color_pair(self.TITLE_COLOR_PAIR) | curses.A_REVERSE)
+        line = line.ljust(self.width)[: self.width]
+        self.stdscr.addstr(
+            self.TITLE_LINE,
+            0,
+            line,
+            curses.color_pair(self.TITLE_COLOR_PAIR) | curses.A_REVERSE,
+        )
 
     def header(self, line):
         line = line.ljust(self.width)
-        self.stdscr.addstr(self.HEADER_LINE, 0, line, curses.color_pair(self.HEADER_COLOR_PAIR))
-        self.stdscr.addstr(self.HEADER_SEPARATOR_LINE, 0, "-" * self.width, curses.color_pair(self.HEADER_COLOR_PAIR))
+        self.stdscr.addstr(
+            self.HEADER_LINE, 0, line, curses.color_pair(self.HEADER_COLOR_PAIR)
+        )
+        self.stdscr.addstr(
+            self.HEADER_SEPARATOR_LINE,
+            0,
+            "-" * self.width,
+            curses.color_pair(self.HEADER_COLOR_PAIR),
+        )
 
-    def line(self, y, line, attrs_mask = None):
+    def line(self, y, line, attrs_mask=None):
         if attrs_mask is None:
             attrs_mask = curses.color_pair(self.CONTENT_COLOR_PAIR)
 
@@ -223,7 +243,9 @@ class PackageNavigator:
             ) from e
 
     def selected_line(self, pos, line):
-        self.line(pos, line, curses.A_BOLD | curses.color_pair(self.SELECTED_COLOR_PAIR))
+        self.line(
+            pos, line, curses.A_BOLD | curses.color_pair(self.SELECTED_COLOR_PAIR)
+        )
 
     def draw_overlays_view(self, first_render: bool, scrolled: bool):
         if first_render:
@@ -258,14 +280,25 @@ class PackageNavigator:
             scrolled,
             [60, 6, 20],
             ["Package", "Depth", f"Dependants in {self.atom}"],
-            [[p.cpv, p.depth, p.filtered_depend_count] for p in self.package.dependencies],
+            [
+                [p.cpv, p.depth, p.filtered_depend_count]
+                for p in self.package.dependencies
+            ],
         )
 
-    def draw_table(self, first_render: bool, scrolled: bool, limits: List, headers: List, items: List):
+    def draw_table(
+        self,
+        first_render: bool,
+        scrolled: bool,
+        limits: List,
+        headers: List,
+        items: List,
+    ):
         if sum(limits) > 100:
             raise Exception("Limits sum cannot exceed 100%")
 
         limits = [int(self.width * limit / 100) for limit in limits]
+
         def _limit(elements: List):
             elements = [str(elements[i]).ljust(limit) for i, limit in enumerate(limits)]
             return "".join(elements)
@@ -304,8 +337,8 @@ class PackageNavigator:
         self.height, self.width = self.stdscr.getmaxyx()
 
         state = self.state
-        first_render = (state.view_type != self.prev_view_type)
-        scrolled = (state.scroll_offset != self.prev_scroll_offset)
+        first_render = state.view_type != self.prev_view_type
+        scrolled = state.scroll_offset != self.prev_scroll_offset
         params = [first_render, scrolled]
         if state.view_type == ViewType.OVERLAYS:
             self.draw_overlays_view(*params)
@@ -331,20 +364,23 @@ class PackageNavigator:
         key = self.stdscr.getch()
 
         state = self.state
-        if key == ord('q'):
+        if key == ord("q"):
             return False
-        elif key == ord('j') or key == curses.KEY_DOWN:
+        elif key == ord("j") or key == curses.KEY_DOWN:
             state.selected_index += 1
-            if state.selected_index - state.scroll_offset >= self.max_content_y - self.CONTENT_LINE:
+            if (
+                state.selected_index - state.scroll_offset
+                >= self.max_content_y - self.CONTENT_LINE
+            ):
                 state.scroll_offset += 1
             return True
-        elif key == ord('k') or key == curses.KEY_UP:
+        elif key == ord("k") or key == curses.KEY_UP:
             if state.selected_index > 0:
                 state.selected_index -= 1
                 if state.selected_index < state.scroll_offset:
                     state.scroll_offset -= 1
             return True
-        elif key == ord('l') or key == ord('\n') or key == curses.KEY_RIGHT:
+        elif key == ord("l") or key == ord("\n") or key == curses.KEY_RIGHT:
             view_type = None
             if state.view_type == ViewType.OVERLAYS:
                 self.overlay = self.overlay_keys[state.selected_index]
@@ -357,13 +393,13 @@ class PackageNavigator:
             if view_type:
                 self.stack.append(State(view_type=view_type))
                 return True
-        elif key == ord('h') or key == ord('\x1b') or key == curses.KEY_LEFT:
+        elif key == ord("h") or key == ord("\x1b") or key == curses.KEY_LEFT:
             if len(self.stack) > 1:
                 self.stack.pop()
                 # to refill
                 self._breadcrumbs = self._breadcrumbs[:-2]
                 return True
-        elif key == ord('r'):
+        elif key == ord("r"):
             return True
         elif key == -1:
             # No key pressed, continue
@@ -375,11 +411,21 @@ class PackageNavigator:
 
         if curses.has_colors():
             curses.start_color()
-            curses.init_pair(self.TITLE_COLOR_PAIR, curses.COLOR_GREEN, curses.COLOR_WHITE)
-            curses.init_pair(self.HEADER_COLOR_PAIR, curses.COLOR_BLUE, curses.COLOR_WHITE)
-            curses.init_pair(self.STATUS_BAR_COLOR_PAIR, curses.COLOR_YELLOW, curses.COLOR_WHITE)
-            curses.init_pair(self.SELECTED_COLOR_PAIR, curses.COLOR_GREEN, curses.COLOR_WHITE)
-            curses.init_pair(self.CONTENT_COLOR_PAIR, curses.COLOR_BLACK, curses.COLOR_WHITE)
+            curses.init_pair(
+                self.TITLE_COLOR_PAIR, curses.COLOR_GREEN, curses.COLOR_WHITE
+            )
+            curses.init_pair(
+                self.HEADER_COLOR_PAIR, curses.COLOR_BLUE, curses.COLOR_WHITE
+            )
+            curses.init_pair(
+                self.STATUS_BAR_COLOR_PAIR, curses.COLOR_YELLOW, curses.COLOR_WHITE
+            )
+            curses.init_pair(
+                self.SELECTED_COLOR_PAIR, curses.COLOR_GREEN, curses.COLOR_WHITE
+            )
+            curses.init_pair(
+                self.CONTENT_COLOR_PAIR, curses.COLOR_BLACK, curses.COLOR_WHITE
+            )
 
         curses.curs_set(0)  # Hide cursor
         stdscr.keypad(True)
@@ -390,7 +436,9 @@ class PackageNavigator:
         failed = True
         while failed and self.height_offset < self.height:
             try:
-                self.stdscr.addstr(self.height - self.height_offset, 0, "Bottom", curses.A_REVERSE)
+                self.stdscr.addstr(
+                    self.height - self.height_offset, 0, "Bottom", curses.A_REVERSE
+                )
                 failed = False
             except Exception as e:
                 print(f"Adjusting bottom {self.height_offset}: {e}")
@@ -411,6 +459,7 @@ class PackageNavigator:
                 break
             # None - skip
 
+
 def get_overlays(atom: str):
     parser = Parser(atom)
 
@@ -420,41 +469,59 @@ def get_overlays(atom: str):
     overlays: dict = None
 
     try:
-        result = subprocess.run(['equery', 'list', '--format', parser.equery_list_tmpl, atom], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["equery", "list", "--format", parser.equery_list_tmpl, atom],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         overlays = parser.parse_equery_list(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error executing equery: {e}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        result = subprocess.run(['equery', 'list', '--format', parser.equery_list_set_tmpl, '@installed'], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["equery", "list", "--format", parser.equery_list_set_tmpl, "@installed"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         parser.installed_packages = parser.parse_equery_list_to_set(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error executing equery: {e}", file=sys.stderr)
         sys.exit(1)
 
     for overlay_name, overlay in overlays.items():
-        print(f"Fetching dependencies of {len(overlay)} packages from {overlay_name}...")
+        print(
+            f"Fetching dependencies of {len(overlay)} packages from {overlay_name}..."
+        )
         for pkg in overlay:
             try:
                 dep_result = subprocess.run(
-                    ['equery', 'g', '--linear', pkg.cpv],
+                    ["equery", "g", "--linear", pkg.cpv],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 deps = parser.parse_dependency_graph(dep_result.stdout)
                 pkg.dependencies = deps
                 pkg.dependencies_count = len(deps)
             except subprocess.CalledProcessError as e:
-                print(f"Warning: Could not get dependencies for {pkg.cpv}: {e}", file=sys.stderr)
+                print(
+                    f"Warning: Could not get dependencies for {pkg.cpv}: {e}",
+                    file=sys.stderr,
+                )
 
     for overlay in overlays.values():
         for pkg in overlay:
             for dep in pkg.dependencies:
-                dep.filtered_depend_count = parser.dependencies[dep.cpv].filtered_depend_count
+                dep.filtered_depend_count = parser.dependencies[
+                    dep.cpv
+                ].filtered_depend_count
 
     return overlays
+
 
 def main():
     if len(sys.argv) != 2:
@@ -469,7 +536,7 @@ def main():
     cache_file = cache_dir / atom
     if os.path.exists(cache_file):
         try:
-            with open(cache_file, 'rb') as f:
+            with open(cache_file, "rb") as f:
                 overlays = pickle.load(f)
                 print(f"Loaded overlays from {cache_file}")
         except Exception as e:
@@ -481,7 +548,7 @@ def main():
 
         try:
             cache_dir.mkdir(parents=True, exist_ok=True)
-            with open(cache_file, 'wb') as f:
+            with open(cache_file, "wb") as f:
                 pickle.dump(overlays, f, protocol=pickle.HIGHEST_PROTOCOL)
         except Exception as e:
             print(f"Error saving cache: {e}", file=sys.stderr)
@@ -490,6 +557,7 @@ def main():
     print("Sorting...")
     navigator = PackageNavigator(atom, overlays)
     curses.wrapper(navigator.main_loop)
+
 
 if __name__ == "__main__":
     main()
